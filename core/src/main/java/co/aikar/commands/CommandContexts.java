@@ -336,7 +336,15 @@ public class CommandContexts<R extends CommandExecutionContext<?, ? extends Comm
     }
 
     public ContextResolver<?, R> getResolver(Class<?> type) {
+
+        if (type == Object.class) {
+            ContextResolver<?, R> resolver = contextMap.get(Object.class);
+
+            if (resolver != null) return resolver;
+        }
+
         Class<?> rootType = type;
+
         do {
             if (type == Object.class) {
                 break;
