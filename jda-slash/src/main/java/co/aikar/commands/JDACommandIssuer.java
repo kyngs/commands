@@ -1,9 +1,11 @@
 package co.aikar.commands;
 
+import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Channel;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
@@ -30,7 +32,7 @@ public class JDACommandIssuer implements CommandIssuer {
     public User getIssuer() {
         return interaction.getUser();
     }
-    
+
     public Member getMember() {
         return interaction.getMember();
     }
@@ -41,6 +43,14 @@ public class JDACommandIssuer implements CommandIssuer {
 
     public Guild getGuild() {
         return interaction.getGuild();
+    }
+
+    public void message(Message message) {
+        this.message = message;
+    }
+
+    public void embed(MessageEmbed... embeds) {
+        this.message = new MessageBuilder().setEmbeds(embeds).build();
     }
 
     @Override
@@ -72,10 +82,14 @@ public class JDACommandIssuer implements CommandIssuer {
         messages.add(message);
     }
 
-    public void complete(InteractionHook hook) {
-        if (message != null) throw new IllegalStateException("Already completed");
-        String message = String.join("\n", messages);
-        if (message.isEmpty()) message = "No response.";
-        this.message = hook.sendMessage(message).complete();
+    protected void complete(InteractionHook hook) {
+        if (message == null) {
+            String message = String.join("\n", messages);
+            if (message.isEmpty()) message = "No response.";
+            hook.sendMessage(message).complete();
+        } else {
+            hook.sendMessage(message).complete();
+        }
+
     }
 }

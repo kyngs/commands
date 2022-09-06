@@ -32,7 +32,6 @@ public class JDAListener extends ListenerAdapter {
         JDACommandIssuer issuer = new JDACommandIssuer(interaction, manager);
 
         command.execute(issuer, interaction.getName(), args);
-
         issuer.complete(hook);
 
     }
