@@ -24,7 +24,6 @@
 package co.aikar.commands;
 
 import co.aikar.commands.apachecommonslang.ApacheCommonsExceptionUtil;
-import co.aikar.timings.lib.MCTiming;
 import co.aikar.timings.lib.TimingManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -43,8 +42,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -78,8 +75,9 @@ public class BukkitCommandManager extends CommandManager<
     @SuppressWarnings("WeakerAccess")
     protected final Plugin plugin;
     private final CommandMap commandMap;
+    @Deprecated
     private final TimingManager timingManager;
-    private final BukkitTask localeTask;
+    private ACFBukkitScheduler scheduler;
     private final Logger logger;
     public final Integer mcMinorVersion;
     public final Integer mcPatchVersion;
@@ -87,7 +85,6 @@ public class BukkitCommandManager extends CommandManager<
     protected Map<String, BukkitRootCommand> registeredCommands = new HashMap<>();
     protected BukkitCommandContexts contexts;
     protected BukkitCommandCompletions completions;
-    MCTiming commandTiming;
     protected BukkitLocales locales;
     protected Map<UUID, String> issuersLocaleString = new ConcurrentHashMap<>();
     private boolean cantReadLocale = false;
@@ -95,10 +92,18 @@ public class BukkitCommandManager extends CommandManager<
 
     public BukkitCommandManager(Plugin plugin) {
         this.plugin = plugin;
+
+        //See what schedule we should use, bukkit or folia
+        try {
+            Class.forName("io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
+            this.scheduler = new ACFFoliaScheduler();
+        } catch (ClassNotFoundException ignored) {
+            this.scheduler = new ACFBukkitScheduler();
+        }
+
         String prefix = this.plugin.getDescription().getPrefix();
         this.logger = Logger.getLogger(prefix != null ? prefix : this.plugin.getName());
         this.timingManager = TimingManager.of(plugin);
-        this.commandTiming = this.timingManager.of("Commands");
         this.commandMap = hookCommandMap();
         this.formatters.put(MessageType.ERROR, defaultFormatter = new BukkitMessageFormatter(ChatColor.RED, ChatColor.YELLOW, ChatColor.RED));
         this.formatters.put(MessageType.SYNTAX, new BukkitMessageFormatter(ChatColor.YELLOW, ChatColor.GREEN, ChatColor.WHITE));
@@ -124,12 +129,14 @@ public class BukkitCommandManager extends CommandManager<
         Bukkit.getPluginManager().registerEvents(new ACFBukkitListener(this, plugin), plugin);
 
         getLocales(); // auto load locales
-        this.localeTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        scheduler.createLocaleTask(plugin, () -> {
             if (this.cantReadLocale || !this.autoDetectFromClient) {
                 return;
             }
             Bukkit.getOnlinePlayers().forEach(this::readPlayerLocale);
         }, 30, 30);
+
+        this.validNamePredicate = ACFBukkitUtil::isValidName;
 
         registerDependency(plugin.getClass(), plugin);
         registerDependency(Logger.class, plugin.getLogger());
@@ -139,7 +146,7 @@ public class BukkitCommandManager extends CommandManager<
         registerDependency(JavaPlugin.class, plugin);
         registerDependency(PluginManager.class, Bukkit.getPluginManager());
         registerDependency(Server.class, Bukkit.getServer());
-        registerDependency(BukkitScheduler.class, Bukkit.getScheduler());
+        scheduler.registerSchedulerDependencies(this);
         registerDependency(ScoreboardManager.class, Bukkit.getScoreboardManager());
         registerDependency(ItemFactory.class, Bukkit.getItemFactory());
         registerDependency(PluginDescriptionFile.class, plugin.getDescription());
@@ -333,13 +340,18 @@ public class BukkitCommandManager extends CommandManager<
             }
         } catch (Exception e) {
             cantReadLocale = true;
-            this.localeTask.cancel();
+            this.scheduler.cancelLocaleTask();
             this.log(LogLevel.INFO, "Can't read players locale, you will be unable to automatically detect players language. Only Bukkit 1.7+ is supported for this.", e);
         }
     }
 
+    @Deprecated
     public TimingManager getTimings() {
         return timingManager;
+    }
+
+    public ACFBukkitScheduler getScheduler() {
+        return scheduler;
     }
 
     @Override

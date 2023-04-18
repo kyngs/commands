@@ -1,10 +1,10 @@
 package co.aikar.commands;
 
-import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,7 +20,6 @@ public class ACFVelocityUtil {
     }
 
     public static Player findPlayerSmart(ProxyServer server, CommandIssuer issuer, String search) {
-        CommandSource requester = issuer.getIssuer();
         String name = ACFUtil.replace(search, ":confirm", "");
 
         List<Player> matches = new ArrayList<>(matchPlayer(server, name));
@@ -32,7 +31,7 @@ public class ACFVelocityUtil {
         }
 
         if (matches.isEmpty()) {
-            if (!isValidName(name)) {
+            if (!issuer.getManager().isValidName(name)) {
                 issuer.sendError(MinecraftMessageKeys.IS_NOT_A_VALID_NAME, "{name}", name);
                 return null;
             }
@@ -64,7 +63,7 @@ public class ACFVelocityUtil {
                 .collect(Collectors.toList());
     }
 
-    public static boolean isValidName(String name) {
+    public static boolean isValidName(@Nullable String name) {
         return name != null && !name.isEmpty() && ACFPatterns.VALID_NAME_PATTERN.matcher(name).matches();
     }
 
