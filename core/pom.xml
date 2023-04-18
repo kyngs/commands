@@ -39,6 +39,10 @@
 
     <name>ACF (Core)</name>
 
+    <properties>
+        <jdk.version>17</jdk.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>co.aikar</groupId>

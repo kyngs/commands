@@ -14,6 +14,10 @@
 
     <name>ACF (Bungee)</name>
 
+    <properties>
+        <jdk.version>17</jdk.version>
+    </properties>
+
     <repositories>
         <repository>
             <id>sonatype-snapshots</id>

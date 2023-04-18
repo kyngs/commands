@@ -46,6 +46,10 @@
         </repository>
     </repositories>
 
+    <properties>
+        <jdk.version>17</jdk.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>co.aikar</groupId>

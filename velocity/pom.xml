@@ -43,4 +43,8 @@
 			</resource>
 		</resources>
 	</build>
+
+	<properties>
+		<jdk.version>17</jdk.version>
+	</properties>
 </project>
