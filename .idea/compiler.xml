@@ -23,7 +23,7 @@
     <bytecodeTargetLevel>
       <module name="acf" target="1.8" />
       <module name="acf-example" target="1.8" />
-      <module name="commands" target="1.8" />
+      <module name="acf-jda-slash" target="1.8" />
       <module name="example-plugin" target="1.8" />
     </bytecodeTargetLevel>
   </component>
@@ -38,7 +38,6 @@
       <module name="acf-parent" options="-parameters" />
       <module name="acf-sponge" options="-parameters" />
       <module name="acf-velocity" options="-parameters" />
-      <module name="commands" options="-parameters" />
       <module name="example-plugin" options="-parameters" />
     </option>
   </component>
