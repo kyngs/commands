@@ -77,7 +77,7 @@ public class BukkitCommandManager extends CommandManager<
     private final CommandMap commandMap;
     @Deprecated
     private final TimingManager timingManager;
-    private ACFBukkitScheduler scheduler;
+    protected ACFBukkitScheduler scheduler;
     private final Logger logger;
     public final Integer mcMinorVersion;
     public final Integer mcPatchVersion;
@@ -93,11 +93,10 @@ public class BukkitCommandManager extends CommandManager<
     public BukkitCommandManager(Plugin plugin) {
         this.plugin = plugin;
 
-        //See what schedule we should use, bukkit or folia
         try {
-            Class.forName("io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
-            this.scheduler = new ACFFoliaScheduler();
-        } catch (ClassNotFoundException ignored) {
+            this.scheduler = new ACFPaperScheduler(Bukkit.getAsyncScheduler());
+        } catch (NoSuchMethodError e) {
+            // Ignored to use Bukkit Scheduler
             this.scheduler = new ACFBukkitScheduler();
         }
 
@@ -316,26 +315,32 @@ public class BukkitCommandManager extends CommandManager<
             return;
         }
         try {
-            Field entityField = getEntityField(player);
-            if (entityField == null) {
-                return;
-            }
-            Object nmsPlayer = entityField.get(player);
-            if (nmsPlayer != null) {
-                Field localeField = nmsPlayer.getClass().getDeclaredField("locale");
-                localeField.setAccessible(true);
-                Object localeString = localeField.get(nmsPlayer);
-                if (localeString instanceof String) {
-                    UUID playerUniqueId = player.getUniqueId();
-                    if (!localeString.equals(issuersLocaleString.get(playerUniqueId))) {
-                        String[] split = ACFPatterns.UNDERSCORE.split((String) localeString);
-                        Locale locale = split.length > 1 ? new Locale(split[0], split[1]) : new Locale(split[0]);
-                        Locale prev = issuersLocale.put(playerUniqueId, locale);
-                        issuersLocaleString.put(playerUniqueId, (String) localeString);
-                        if (!Objects.equals(locale, prev)) {
-                            this.notifyLocaleChange(getCommandIssuer(player), prev, locale);
+            Locale locale = null;
+            try {
+                locale = player.locale();
+            } catch (NoSuchMethodError ignored) {
+                Field entityField = getEntityField(player);
+                if (entityField != null) {
+                    Object nmsPlayer = entityField.get(player);
+                    if (nmsPlayer != null) {
+                        Field localeField = nmsPlayer.getClass().getDeclaredField("locale");
+                        localeField.setAccessible(true);
+                        Object localeString = localeField.get(nmsPlayer);
+                        if (localeString instanceof String) {
+                            if (!localeString.equals(issuersLocaleString.get(player.getUniqueId()))) {
+                                String[] split = ACFPatterns.UNDERSCORE.split((String) localeString);
+                                locale = split.length > 1 ? new Locale(split[0], split[1]) : new Locale(split[0]);
+                            }
                         }
                     }
+                }
+            }
+            if (locale != null) {
+                UUID playerUniqueId = player.getUniqueId();
+                Locale prev = issuersLocale.put(playerUniqueId, locale);
+                issuersLocaleString.put(playerUniqueId, locale.toString());
+                if (!Objects.equals(locale, prev)) {
+                    this.notifyLocaleChange(getCommandIssuer(player), prev, locale);
                 }
             }
         } catch (Exception e) {
